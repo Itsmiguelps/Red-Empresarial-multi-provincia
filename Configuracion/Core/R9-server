@@ -1,0 +1,74 @@
+! ============================================================
+! R9-server
+! ============================================================
+R9 (Core - Área 0)
+enable
+configure terminal
+hostname R9
+no ip domain-lookup
+banner motd # ADVERTENCIA: Acceso restringido. Solo personal autorizado. #
+
+username admin privilege 15 secret cisco123
+enable secret cisco123
+service password-encryption
+
+ip domain-name empresa.local
+crypto key generate rsa general-keys modulus 2048
+ip ssh version 2
+login block-for 120 attempts 3 within 60
+
+! ========= INTERFACES WAN =========
+interface Serial0/0/0
+ description ISP-R9
+ ip address 210.10.11.2 255.255.255.252
+ no shutdown
+
+interface g0/1
+ description R9-server
+ ip address 192.168.200.1 255.255.255.0
+ no shutdown
+
+! ========= RUTA DEFAULT =========
+ip route 0.0.0.0 0.0.0.0 210.10.11.1
+
+! ========= ACL DE SEGURIDAD =========
+
+ip access-list extended ACL_SERVER_IN
+
+ remark PERMITIR WEB
+ permit tcp any host 192.168.200.2 eq 80
+permit tcp any host 192.168.200.2 eq 443
+
+ remark PERITIR PING
+ permit icmp any any
+
+ remark BLOQUEAR TELNET
+ deny tcp any any eq 23
+
+ remark PERMITIR REDES INTERNAS
+ permit ip 192.168.0.0 0.0.255.255 any
+ permit ip 172.16.99.0 0.0.0.31 any
+ permit ip 10.0.0.0 0.255.255.255 any
+
+ remark DENEGAR TODO
+ deny ip any any 
+
+interface Serial0/0/0
+ ip access-group ACL_SERVER_IN in
+ip access-list standard ACL_VTY_ACCESS
+ permit 172.16.99.0 0.0.0.31
+ deny any 
+
+ 
+
+line vty 0 4
+access-class ACL_VTY_ACCESS in
+ transport input ssh
+ login local
+ exec-timeout 5 0
+logging synchronous
+line con 0
+ password cisco123
+ login
+logging synchronous
+end
