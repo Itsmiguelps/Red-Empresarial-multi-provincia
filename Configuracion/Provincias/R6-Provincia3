@@ -1,0 +1,164 @@
+! ============================================================
+! R6-Provincia 3
+! ============================================================
+R6-Provincia3 (OSPF Area 0 - Router on Stick)
+enable
+configure terminal
+hostname R6
+no ip domain-lookup
+banner motd # ADVERTENCIA: R6-Provincia3 - Acceso solo personal autorizado. #
+
+username admin privilege 15 secret cisco123
+enable secret cisco123
+service password-encryption
+ip domain-name empresa.local
+
+crypto key generate rsa general-keys modulus 1024
+ip ssh version 2
+ip ssh time-out 60
+ip ssh authentication-retries 3
+login block-for 120 attempts 3 within 60
+
+! ========= DHCP EXCLUDE =========
+ip dhcp excluded-address 192.168.50.1
+ip dhcp excluded-address 192.168.60.1
+ip dhcp excluded-address 192.168.70.1
+ip dhcp excluded-address 192.168.80.1
+ip dhcp excluded-address 172.16.99.7
+
+! ========= DHCP POOLS =========
+
+ip dhcp pool VLAN50
+ network 192.168.50.0 255.255.255.0
+ default-router 192.168.50.1
+ dns-server 8.8.8.8
+
+ip dhcp pool VLAN60
+ network 192.168.60.0 255.255.255.0
+ default-router 192.168.60.1
+ dns-server 8.8.8.8
+
+ip dhcp pool VLAN70
+ network 192.168.70.0 255.255.255.0
+ default-router 192.168.70.1
+ dns-server 8.8.8.8
+
+ip dhcp pool VLAN80
+ network 192.168.80.0 255.255.255.0
+ default-router 192.168.80.1
+ dns-server 8.8.8.8
+
+! ========= INTERFACE WAN 1 =========
+interface Serial0/1/1
+ description ENLACE WAN PRINCIPAL
+ ip address 10.0.0.34 255.255.255.252
+ no shutdown
+
+! ========= INTERFACE WAN 2 =========
+interface Serial0/2/1
+ description ENLACE WAN BACKUP
+ ip address 10.0.0.38 255.255.255.252
+ no shutdown
+
+! ========= ROUTER ON STICK =========
+interface GigabitEthernet0/1
+ description TRUNK AL SWITCH
+ no ip address
+ no shutdown
+
+interface GigabitEthernet0/1.50
+ encapsulation dot1Q 50
+ ip address 192.168.50.1 255.255.255.0
+
+
+interface GigabitEthernet0/1.60
+ encapsulation dot1Q 60
+ ip address 192.168.60.1 255.255.255.0
+ 
+
+interface GigabitEthernet0/1.70
+ encapsulation dot1Q 70
+ ip address 192.168.70.1 255.255.255.0
+ 
+
+interface GigabitEthernet0/1.80
+ encapsulation dot1Q 80
+ ip address 192.168.80.1 255.255.255.0
+
+! VLAN ADMINISTRATIVA
+
+interface GigabitEthernet0/1.99
+ encapsulation dot1Q 99
+ ip address 172.16.99.7 255.255.255.224
+
+interface GigabitEthernet0/1.999
+ encapsulation dot1Q 999 native
+ no ip address
+
+
+! ========= OSPF CON MD5 =========
+router ospf 1
+ router-id 6.6.6.6
+ area 0 authentication message-digest
+ network 10.0.0.32 0.0.0.3 area 0
+ network 10.0.0.36 0.0.0.3 area 0
+ network 192.168.50.0 0.0.0.255 area 0
+ network 192.168.60.0 0.0.0.255 area 0
+ network 192.168.70.0 0.0.0.255 area 0
+ network 192.168.80.0 0.0.0.255 area 0
+ network 172.16.99.0 0.0.0.31 area 0
+
+interface Serial0/1/1
+ ip ospf message-digest-key 1 md5 cisco123
+ ip ospf authentication message-digest
+
+interface Serial0/2/1
+ ip ospf message-digest-key 1 md5 cisco123
+ ip ospf authentication message-digest
+!
+! ========= RUTA ESTATICA HACIA INTERNET =========
+ip route 0.0.0.0 0.0.0.0 10.0.0.33
+ip route 0.0.0.0 0.0.0.0 10.0.0.37 5
+
+! ========= ACL DE SEGURIDAD =========
+ip access-list extended ACL_WAN_IN
+ remark PERMITIR OSPF (CRUCIAL PARA LA ADYACENCIA)
+ permit ospf any any
+
+ remark BLOQUEAR TELNET (REQUISITO)
+ deny tcp any any eq 23
+
+ remark PERMITIR TRÁFICO DE REDES INTERNAS
+ permit ip 192.168.0.0 0.0.255.255 any
+ permit ip 172.16.99.0 0.0.0.31 any
+
+ remark DENEGAR EL RESTO Y LOGUEAR
+ deny ip any any log
+
+! ========= APLICACIÓN CORRECTA EN WAN =========
+interface Serial0/1/1
+ ip access-group ACL_WAN_IN in
+
+interface Serial0/2/1
+ ip access-group ACL_WAN_IN in
+
+! ACL: Control de VTY
+ip access-list standard ACL_VTY_ACCESS
+ permit 172.16.99.0 0.0.0.31
+ deny any log
+
+! ========= SSH SOLO EN VTY =========
+line vty 0 4
+ transport input ssh
+ login local
+ access-class ACL_VTY_ACCESS in
+ exec-timeout 5 0
+logging synchronous
+
+line con 0
+ password cisco123
+ login
+ exec-timeout 10 0
+logging synchronous
+
+end
