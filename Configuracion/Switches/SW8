@@ -1,0 +1,98 @@
+! ============================================================
+! SW8 (R7 - VLAN100)
+! ============================================================
+enable
+configure terminal
+hostname SW8-r7 
+no ip domain-lookup
+banner motd # ADVERTENCIA: SW8 - Solo personal autorizado. #
+
+username admin privilege 15 secret cisco123
+enable secret cisco123
+service password-encryption
+ip domain-name empresa.local
+crypto key generate rsa general-keys modulus 1024
+ip ssh version 2
+========= VLANS =========
+vlan 90
+ name compras
+
+vlan 100
+ name almacen
+
+vlan 99
+ name ADMIN
+
+========= CAMBIAR VLAN NATIVA =========
+vlan 999
+ name UNUSED_NATIVE
+
+========= TRUNK UPLINK =========
+interface g0/2
+ switchport mode trunk
+switchport nonegotiate
+ switchport trunk native vlan 999
+ switchport trunk allowed vlan 10,20,30,40,50,60,70,80,90,100,110,120,99,999
+ no shutdown
+
+========= ACCESS PORTS =========
+interface FastEthernet0/1
+ switchport mode access
+ switchport access vlan 100
+ switchport nonegotiate
+ switchport port-security maximum 2
+ switchport port-security violation shutdown
+ switchport port-security
+switchport port-security mac-address sticky
+ spanning-tree portfast
+ no shutdown
+
+interface FastEthernet0/2
+ switchport mode access
+ switchport access vlan 100
+ switchport nonegotiate
+ switchport port-security maximum 2
+ switchport port-security violation shutdown
+ switchport port-security
+switchport port-security mac-address sticky
+ spanning-tree portfast
+ no shutdown
+
+interface FastEthernet0/3
+ switchport mode access
+ switchport access vlan 100
+ switchport nonegotiate
+ switchport port-security maximum 2
+ switchport port-security violation shutdown
+ switchport port-security
+switchport port-security mac-address sticky
+ spanning-tree portfast
+ no shutdown
+
+========= APAGAR INTERFACES NO USADAS =========
+interface range FastEthernet0/6 - 24
+ shutdown
+
+========= VLAN ADMIN E IP =========
+interface vlan 99
+ ip address 172.16.99.13 255.255.255.224
+ no shutdown
+
+ip default-gateway 172.16.99.11
+
+===============ACL=========================
+ip access-list standard ACL_VTY
+ permit 172.16.99.0 0.0.0.31
+ deny any
+
+line vty 0 4
+ transport input ssh
+ login local
+access-class ACL_VTY in
+ exec-timeout 5 0
+logging synchronous
+line con 0
+ password cisco123
+ login
+logging synchronous
+end
