@@ -21,12 +21,12 @@ ip ssh authentication-retries 3
 login block-for 120 attempts 3 within 60
 
 
-! ========= DHCP EXCLUDE =========
+========= DHCP EXCLUDE =========
 ip dhcp excluded-address 192.168.30.1
 ip dhcp excluded-address 192.168.40.1
 ip dhcp excluded-address 172.16.99.4
 
-! ========= DHCP POOLS =========
+========= DHCP POOLS =========
 ip dhcp pool VLAN30
  network 192.168.30.0 255.255.255.0
  default-router 192.168.30.1
@@ -37,19 +37,19 @@ ip dhcp pool VLAN40
  default-router 192.168.40.1
  dns-server 8.8.8.8
 
-! ========= INTERFACE WAN 1 =========
+========= INTERFACE WAN 1 =========
 interface Serial0/1/0
  description ENLACE WAN PRINCIPAL
  ip address 10.0.0.26 255.255.255.252
  no shutdown
 
-! ========= INTERFACE WAN 2 =========
+========= INTERFACE WAN 2 =========
 interface Serial0/2/0
  description ENLACE WAN BACKUP
  ip address 10.0.0.30 255.255.255.252
  no shutdown
 
-! ========= ROUTER ON STICK =========
+========= ROUTER ON STICK =========
 interface GigabitEthernet0/1
  description TRUNK AL SWITCH
  no ip address
@@ -65,7 +65,7 @@ interface GigabitEthernet0/1.40
  ip address 192.168.40.1 255.255.255.0
 
 
-! VLAN ADMINISTRATIVA
+====VLAN ADMINISTRATIVA====
 
 interface GigabitEthernet0/1.99
  encapsulation dot1Q 99
@@ -75,7 +75,7 @@ interface GigabitEthernet0/1.999
  encapsulation dot1Q 999 native
  no ip address
 
-! ========= OSPF CON MD5 =========
+========= OSPF CON MD5 =========
 router ospf 1
  router-id 5.5.5.5
  area 0 authentication message-digest
@@ -93,12 +93,12 @@ interface Serial0/2/0
  ip ospf message-digest-key 1 md5 cisco123
  ip ospf authentication message-digest
 
-! ========= RUTA ESTATICA HACIA INTERNET =========
+========= RUTA ESTATICA HACIA INTERNET =========
 ip route 0.0.0.0 0.0.0.0 10.0.0.25
 ip route 0.0.0.0 0.0.0.0 10.0.0.29 5
 
 
-! ========= ACL DE SEGURIDAD =========
+========= ACL DE SEGURIDAD =========
 ip access-list extended ACL_WAN_IN
  remark PERMITIR OSPF (CRUCIAL PARA LA ADYACENCIA)
  permit ospf any any
@@ -111,31 +111,31 @@ ip access-list extended ACL_WAN_IN
  remark DENEGAR EL RESTO Y LOGUEAR
  deny ip any any log
 
-! ========= APLICACIÓN CORRECTA EN WAN =========
+========= APLICACIÓN CORRECTA EN WAN =========
 interface Serial0/1/0
  ip access-group ACL_WAN_IN in
 
 interface Serial0/2/0
  ip access-group ACL_WAN_IN in
 
-! ACL : Control de VTY
+====ACL : Control de VTY
 ip access-list standard ACL_VTY_ACCESS
  permit 172.16.99.0 0.0.0.31
  deny any log
 
-! ACL 3: Limitar ICMP (Seguridad Pertinente)
+====ACL 3: Limitar ICMP (Seguridad Pertinente)
 ip access-list extended ACL_PING_LIMIT
  permit icmp any any echo-reply
  permit icmp any any unreachable
  deny icmp any any
 
-! ACL 4: Bloquear tráfico basura (Anti-Spoofing)
+=====ACL 4: Bloquear tráfico basura (Anti-Spoofing)
 ip access-list standard ACL_NO_SPOOF
  deny 127.0.0.0 0.255.255.255
  permit any
 
 
-! ========= SSH SOLO EN VTY =========
+========= SSH SOLO EN VTY =========
 line vty 0 4
  transport input ssh
  login local
