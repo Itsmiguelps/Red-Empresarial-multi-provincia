@@ -9,7 +9,6 @@
 ╚═╝  ╚═╝╚══════╝╚═════╝     ╚══════╝╚═╝     ╚═╝╚═╝     ╚═╝  ╚═╝╚══════╝╚══════╝╚═╝  ╚═╝╚═╝  ╚═╝╚═╝╚═╝  ╚═╝╚══════╝
 ```
 
-
 # 📦Infraestructura de Red Empresarial
 **Diseño e implementación completa de una red empresarial distribuida con OSPF, VLANs, NAT, SSH y seguridad avanzada.**
 
@@ -18,6 +17,7 @@
 
 ![Cisco Packet Tracer](https://img.shields.io/badge/Cisco-Packet%20Tracer-005EA2?style=flat-square) ![OSPF](https://img.shields.io/badge/Enrutamiento-OSPF%20Multi--área-7ED321?style=flat-square) ![Seguridad](https://img.shields.io/badge/Seguridad-ACLs%20%26%20VTY-D0021B?style=flat-square) ![Segmentación](https://img.shields.io/badge/Segmentaci%C3%B3n-VLANs-0091FF?style=flat-square) ![NAT](https://img.shields.io/badge/Traducci%C3%B3n-NAT%20Overload-F5A623?style=flat-square)
 
+</div>
 ---
 
 ## 📋 Descripción del Proyecto
