@@ -1,0 +1,152 @@
+! ============================================================
+! R7-Provincia 4
+! ============================================================
+R7(OSPF Area 0 - Router on Stick)
+
+enable
+configure terminal
+hostname R7
+no ip domain-lookup
+banner motd # ADVERTENCIA: R7 - Acceso solo personal autorizado. #
+
+username admin privilege 15 secret cisco123
+enable secret cisco123
+service password-encryption
+
+ip domain-name empresa.local
+crypto key generate rsa general-keys modulus 2048
+ip ssh version 2
+ip ssh time-out 60
+ip ssh authentication-retries 3
+login block-for 120 attempts 3 within 60
+
+
+ ========= DHCP EXCLUDE =========
+ip dhcp excluded-address 192.168.90.1
+ip dhcp excluded-address 192.168.100.1
+ip dhcp excluded-address 172.16.99.11
+
+========= DHCP POOLS =========
+ip dhcp pool VLAN90
+ network 192.168.90.0 255.255.255.0
+ default-router 192.168.90.1
+ dns-server 8.8.8.8
+
+ip dhcp pool VLAN100
+ network 192.168.100.0 255.255.255.0
+ default-router 192.168.100.1
+ dns-server 8.8.8.8
+
+ ========= INTERFACE WAN 1 =========
+interface Serial0/2/0
+ description ENLACE WAN PRINCIPAL
+ ip address 10.0.0.42 255.255.255.252
+ no shutdown
+
+ ========= INTERFACE WAN 2 =========
+interface Serial0/0/1
+ description ENLACE WAN BACKUP
+ ip address 10.0.0.46 255.255.255.252
+ no shutdown
+
+ ========= ROUTER ON STICK =========
+interface GigabitEthernet0/1
+ description TRUNK AL SWITCH
+ no ip address
+ no shutdown
+
+interface GigabitEthernet0/1.90
+ encapsulation dot1Q 90
+ ip address 192.168.90.1 255.255.255.0
+ 
+
+interface GigabitEthernet0/1.100
+ encapsulation dot1Q 100
+ ip address 192.168.100.1 255.255.255.0
+
+
+====VLAN ADMINISTRATIVA=====
+
+interface GigabitEthernet0/1.99
+ encapsulation dot1Q 99
+ ip address 172.16.99.11 255.255.255.224
+
+interface GigabitEthernet0/1.999
+ encapsulation dot1Q 999 native
+ no ip address
+
+========= OSPF CON MD5 =========
+router ospf 1
+ router-id 7.7.7.7
+ area 0 authentication message-digest
+ network 10.0.0.40 0.0.0.3 area 0
+ network 10.0.0.44 0.0.0.3 area 0
+ network 192.168.90.0 0.0.0.255 area 0
+ network 192.168.100.0 0.0.0.255 area 0
+ network 172.16.99.0 0.0.0.31 area 0
+
+
+interface Serial0/0/1
+ ip ospf message-digest-key 1 md5 cisco123
+ ip ospf authentication message-digest
+
+interface Serial0/2/0
+ ip ospf message-digest-key 1 md5 cisco123
+ ip ospf authentication message-digest
+
+========= RUTA ESTATICA HACIA INTERNET =========
+ip route 0.0.0.0 0.0.0.0 10.0.0.41
+ip route 0.0.0.0 0.0.0.0 10.0.0.45
+
+========= ACL DE SEGURIDAD =========
+ip access-list extended ACL_WAN_IN
+ remark PERMITIR OSPF (CRUCIAL PARA LA ADYACENCIA)
+ permit ospf any any
+
+ remark BLOQUEAR TELNET (REQUISITO)
+ deny tcp any any eq 23
+ remark PERMITIR TRÁFICO DE REDES INTERNAS
+ permit ip 192.168.0.0 0.0.255.255 any
+ permit ip 172.16.99.0 0.0.0.31 any
+ remark DENEGAR EL RESTO Y LOGUEAR
+ deny ip any any log
+
+! ========= APLICACIÓN CORRECTA EN WAN =========
+interface Serial0/0/1
+ ip access-group ACL_WAN_IN in
+
+interface Serial0/2/0
+ ip access-group ACL_WAN_IN in
+
+ACL : Control de VTY
+ip access-list standard ACL_VTY_ACCESS
+ permit 172.16.99.0 0.0.0.31
+ deny any log
+
+ ACL 3: Limitar ICMP (Seguridad Pertinente)
+ip access-list extended ACL_PING_LIMIT
+ permit icmp any any echo-reply
+ permit icmp any any unreachable
+ deny icmp any any
+
+ ACL 4: Bloquear tráfico basura (Anti-Spoofing)
+ip access-list standard ACL_NO_SPOOF
+ deny 127.0.0.0 0.255.255.255
+ permit any
+
+
+========= SSH SOLO EN VTY =========
+line vty 0 4
+ transport input ssh
+ login local
+ access-class ACL_VTY_ACCESS in
+ exec-timeout 5 0
+logging synchronous
+
+line con 0
+ password cisco123
+ login
+ exec-timeout 10 0
+logging synchronous
+
+end
