@@ -1,0 +1,151 @@
+! ============================================================
+! R4-Provincia 1
+! ============================================================
+R4-Provincia1 (OSPF Area 0 - Router on Stick)
+
+enable
+configure terminal
+hostname R4
+no ip domain-lookup
+banner motd # ADVERTENCIA: R4-Provincia1 - Acceso solo personal autorizado. #
+
+username admin privilege 15 secret cisco123
+enable secret cisco123
+service password-encryption
+
+ip domain-name empresa.local
+crypto key generate rsa modulus 2048
+ip ssh version 2
+ip ssh time-out 60
+ip ssh authentication-retries 3
+login block-for 120 attempts 3 within 60
+
+! ========= DHCP EXCLUDE =========
+
+ip dhcp excluded-address 192.168.10.1
+ip dhcp excluded-address 192.168.20.1
+ip dhcp excluded-address 172.16.99.1
+
+
+! ========= DHCP POOLS =========
+
+ip dhcp pool VLAN10
+ network 192.168.10.0 255.255.255.0
+ default-router 192.168.10.1
+ dns-server 8.8.8.8
+
+ip dhcp pool VLAN20
+ network 192.168.20.0 255.255.255.0
+ default-router 192.168.20.1
+ dns-server 8.8.8.8
+
+
+! ========= INTERFACE WAN 1 =========
+interface Serial0/0/0
+ description ENLACE WAN a R2
+ ip address 10.0.0.18 255.255.255.252
+ no shutdown
+!
+! ========= INTERFACE WAN 2 =========
+interface Serial0/1/1
+ description ENLACE WAN R3 BACKUP
+ ip address 10.0.0.22 255.255.255.252
+ no shutdown
+
+
+! ========= ROUTER ON STICK =========
+
+interface GigabitEthernet0/1
+ description TRUNK AL SWITCH
+ no ip address
+ no shutdown
+
+interface GigabitEthernet0/1.10
+ encapsulation dot1Q 10
+ ip address 192.168.10.1 255.255.255.0
+ 
+interface GigabitEthernet0/1.20
+ encapsulation dot1Q 20
+ ip address 192.168.20.1 255.255.255.0
+
+! VLAN ADMINISTRATIVA
+
+interface GigabitEthernet0/1.99
+ encapsulation dot1Q 99
+ ip address 172.16.99.1 255.255.255.224
+
+interface GigabitEthernet0/1.999
+ encapsulation dot1Q 999 native
+ no ip address
+
+
+! ========= OSPF CON MD5 =========
+
+router ospf 1
+ router-id 4.4.4.4
+ area 0 authentication message-digest
+ network 10.0.0.16 0.0.0.3 area 0
+ network 10.0.0.20 0.0.0.3 area 0
+ network 192.168.10.0 0.0.0.255 area 0
+ network 192.168.20.0 0.0.0.255 area 0
+ network 172.16.99.0 0.0.0.31 area 0
+
+interface Serial0/0/0
+ ip ospf message-digest-key 1 md5 cisco123
+ ip ospf authentication message-digest
+
+interface Serial0/1/1
+ ip ospf message-digest-key 1 md5 cisco123
+ ip ospf authentication message-digest
+
+! ========= RUTA ESTATICA HACIA INTERNET =========
+ip route 0.0.0.0 0.0.0.0 10.0.0.17
+ip route 0.0.0.0 0.0.0.0 10.0.0.21 5
+
+
+! ========= ACL DE SEGURIDAD =========
+ip access-list extended ACL_R4
+
+ remark PERMITIR OSPF
+ permit ospf any any
+
+ remark BLOQUEAR BROADCAST
+ deny ip any host 255.255.255.255
+
+ remark BLOQUEAR RED INVALIDA
+ deny ip 0.0.0.0 0.255.255.255 any
+
+ remark BLOQUEAR TELNET
+ deny tcp any any eq 23
+
+ remark PERMITIR REDES PRIVADAS
+ permit ip 192.168.0.0 0.0.255.255 any
+
+ remark DENEGAR TODO
+ deny ip any any log
+
+ip access-list standard ACL_VTY_ACCESS
+ permit 172.16.99.0 0.0.0.31
+ deny any log
+
+! Aplicar ACL en interfaz WAN
+interface Serial0/0/0
+ ip access-group ACL_R4 in
+ 
+
+! ========= SSH SOLO EN VTY =========
+line vty 0 4
+ transport input ssh
+ login local
+ access-class ACL_VTY_ACCESS in
+ exec-timeout 5 0
+ logging synchronous
+
+
+line con 0
+ password cisco123
+ login
+ exec-timeout 10 0
+ logging synchronous
+
+end
