@@ -1,0 +1,110 @@
+! ============================================================
+! R2-core
+! ============================================================
+R2 (Core - Área 0)
+
+enable
+configure terminal
+hostname R2
+no ip domain-lookup
+banner motd # ADVERTENCIA: Acceso restringido. Solo personal autorizado. #
+
+username admin privilege 15 secret cisco123
+enable secret cisco123
+service password-encryption
+
+ip domain-name empresa.local
+crypto key generate rsa general-keys modulus 2048
+ip ssh version 2
+login block-for 120 attempts 3 within 60
+
+! ========= INTERFACE WAN  =========
+interface Serial0/0/1
+ description R1-R2
+ ip address 10.0.0.6 255.255.255.252
+ no shutdown
+
+interface Serial0/3/1
+ description R2-R3
+ ip address 10.0.0.13 255.255.255.252
+ no shutdown
+
+interface Serial0/0/0
+ description R2-R4
+ ip address 10.0.0.17 255.255.255.252
+ no shutdown
+
+interface Serial0/1/0
+ description R2-R5
+ ip address 10.0.0.25 255.255.255.252
+ no shutdown
+
+interface Serial0/1/1
+ description R2-R6
+ ip address 10.0.0.33 255.255.255.252
+ no shutdown
+
+interface Serial0/2/0
+ description R2-R7
+ ip address 10.0.0.41 255.255.255.252
+ no shutdown
+
+interface Serial0/2/1
+ description R2-R8
+ ip address 10.0.0.49 255.255.255.252
+ no shutdown
+
+router ospf 1
+ router-id 2.2.2.2
+ area 0 authentication message-digest
+ network 10.0.0.4 0.0.0.3 area 0
+ network 10.0.0.12 0.0.0.3 area 0
+ network 10.0.0.16 0.0.0.3 area 0
+ network 10.0.0.24 0.0.0.3 area 0
+ network 10.0.0.32 0.0.0.3 area 0
+ network 10.0.0.40 0.0.0.3 area 0
+ network 10.0.0.48 0.0.0.3 area 0
+
+interface Serial0/3/1
+ ip ospf message-digest-key 1 md5 cisco123
+ ip ospf authentication message-digest
+
+interface Serial0/2/0
+ ip ospf message-digest-key 1 md5 cisco123
+ ip ospf authentication message-digest
+
+interface Serial0/2/1
+ ip ospf message-digest-key 1 md5 cisco123
+ ip ospf authentication message-digest
+
+interface Serial0/0/0
+ ip ospf message-digest-key 1 md5 cisco123
+ ip ospf authentication message-digest
+
+interface Serial0/1/0
+ ip ospf message-digest-key 1 md5 cisco123
+ ip ospf authentication message-digest
+
+interface Serial0/1/1
+ ip ospf message-digest-key 1 md5 cisco123
+ ip ospf authentication message-digest
+
+line vty 0 4
+ transport input ssh
+ login local
+ exec-timeout 5 0
+ logging synchronous
+line con 0
+ password cisco123
+ login
+ logging synchronous
+
+! ========= ACL DE SEGURIDAD =========
+ip access-list standard ACL_VTY_ACCESS
+ permit 172.16.99.0 0.0.0.31
+ deny any 
+
+line vty 0 4
+ access-class ACL_VTY_ACCESS in
+
+end
