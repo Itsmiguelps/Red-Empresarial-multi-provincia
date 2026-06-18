@@ -71,6 +71,7 @@ Diseño e implementación de una infraestructura de red robusta, de alta disponi
 
 
 <img width="1916" height="851" alt="Captura de pantalla 2026-05-17 005705" src="https://github.com/user-attachments/assets/073d8158-b54c-46c7-8f6d-ed3d05014c3e" />
+<img width="1916" height="851" alt="Captura de pantalla 2026-05-17 005705" src="https://github.com/user-attachments/assets/79117361-b22c-4587-bfc3-8fc5d291bdd9" />
 
 ---
 ## 📡 Direccionamiento IP (VLSM)
